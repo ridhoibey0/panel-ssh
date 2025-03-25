@@ -238,7 +238,7 @@ class CheckBlanaceAndExpiredJobs implements ShouldQueue
             $headers = [
                 'Content-Type' => 'application/json',
                 'Level' => 'Admin',
-                'Authorization' => 'Bearer ' . $account->server->token,
+                'Authorization' => 'Bearer '.$account->server->token,
             ];
             $client = new Client(['headers' => $headers]);
             $body = [
@@ -258,7 +258,7 @@ class CheckBlanaceAndExpiredJobs implements ShouldQueue
             $headers = [
                 'Content-Type' => 'application/json',
                 'Level' => 'Admin',
-                'Authorization' => 'Bearer ' . $account->server->token,
+                'Authorization' => 'Bearer '.$account->server->token,
             ];
             $client = new Client(['headers' => $headers]);
             $response = $client->delete($endpoint);

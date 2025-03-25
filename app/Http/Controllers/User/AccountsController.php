@@ -359,15 +359,12 @@ class AccountsController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Account not found']);
         }
         
-        $this->headers['X-API-KEY'] = $account->server->token;
+        $this->headers['Authorization'] = 'Bearer '.$account->server->token;
 
         // Determine the URL and body data based on the category slug
         switch ($categoryData->slug) {
             case 'ssh':
-                $this->url = "http://" . $account->server->host . ":14022/api/sshdelete";
-                $this->body = [
-                    "username" => $account->username,
-                ];
+                $this->url = "http://" . $server->host . "/vps/deletesshvpn/".$account->username;
                 break;
             case 'vmess':
                  $this->url = "http://" . $account->server->host . ":14022/api/vmessdelete";
@@ -376,16 +373,10 @@ class AccountsController extends Controller
                  ];
                 break;
             case 'vless':
-                 $this->url = "http://" . $account->server->host . ":14022/api/vlessdelete";
-                 $this->body = [
-                    "username" => $account->username,
-                 ];
+                $this->url = "http://" . $server->host . "/vps/deletevmess/".$account->username;
                 break;
             case 'trojan':
-                 $this->url = "http://" . $account->server->host . ":14022/api/trojandelete";
-                 $this->body = [
-                    "username" => $account->username,
-                 ];
+                $this->url = "http://" . $server->host . "/vps/deletetrojan/".$account->username;
                 break;
             case 'shadowsocks':
                  $this->url = "http://" . $account->server->host . ":14022/api/shadowsocksdelete";
@@ -411,9 +402,7 @@ class AccountsController extends Controller
         DB::beginTransaction();
 
         try {
-            $response = $this->client->post($this->url, [
-                'json' => $this->body,
-            ]);
+            $response = $this->client->delete($this->url);
 
             $output = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $response->getBody()->getContents());
             $output = json_decode($output, true);
