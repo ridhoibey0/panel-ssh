@@ -31,7 +31,7 @@ class Account extends Model
             case 1:
                 return 'Monthly';
             case 2:
-                return 'Hourly';
+                return 'Daily';
             case 3:
                 return 'Trial';
             default:

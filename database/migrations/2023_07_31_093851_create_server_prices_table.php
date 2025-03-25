@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('server_id')->constrained('servers')->onUpdate('cascade')->onDelete('cascade'); // 'cascade' is the default value, but I like to be explicit
             $table->foreignId('role_id')->constrained('roles'); // 'cascade' is the default value, but I like to be explicit
             $table->decimal('price_monthly', 10, 2);
-            $table->decimal('price_hourly', 10, 2);
+            $table->decimal('price_daily', 10, 2);
             $table->timestamps();
         });
     }

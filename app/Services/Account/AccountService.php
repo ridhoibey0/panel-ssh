@@ -103,7 +103,6 @@ class AccountService
         $validatedData = Validator::make($request->all(), [
             'username' => 'required|regex:/^[a-zA-Z0-9_]+$/|min:4|max:15',
             'password' => 'required|regex:/^[a-zA-Z0-9_]+$/|min:4|max:15',
-            'metode' => 'required|in:1,2,3',
         ]);
     
         if ($validatedData->fails()) {
@@ -120,17 +119,21 @@ class AccountService
         }
     
         $user = Auth::user();
-        $price = null;
+        $price = $request->price;
     
-        switch ($request->metode) {
-            case 1:
-                $price = $server->price->price_monthly;
-                break;
-            case 2:
-                $price = $server->price->price_hourly;
-                break;
-            case 3:
-                return $this->trialSSHAccount($server, $request);
+        // switch ($request->metode) {
+        //     case 1:
+        //         $price = $server->price->price_monthly;
+        //         break;
+        //     case 2:
+        //         $price = $server->price->price_hourly;
+        //         break;
+        //     case 3:
+        //         return $this->trialSSHAccount($server, $request);
+        // }
+
+        if($request->type == 3) {
+            return $this->trialSSHAccount($server, $request);
         }
     
         if ($user->balance < $price) {
@@ -368,7 +371,7 @@ class AccountService
             "username" => Str::lower($username),
             "password" => Str::lower($password),
             "limitip" => $server->limit,
-            "expired" => intval(360)
+            "expired" => $request->expired,
         ];
         $this->client = new Client([
             'headers' => $this->headers
@@ -391,42 +394,43 @@ class AccountService
             }
             
             // Log::info('Response : ', $output);
-            $expiryDate = $request->metode == 1 ? Carbon::now()->addDays(30) : ($request->metode == 2 ? Carbon::now()->addHours(1) : Carbon::now()->addHours(1));
+            $expiryDate = Carbon::now()->addDays($request->expired);
             
             $account = Account::create([
                 'user_id' => auth()->user()->id,
                 'server_id' => $server->id,
                 'username' => Str::lower($username),
                 'password' => $request->password,
-                'tipe' => $request->metode,
+                'tipe' => $request->type,
                 'expired_at' => $expiryDate,
                 'detail' => json_encode($output['data']),
-                'charge' => $request->metode == 1 ? $server->price->price_monthly : ($request->metode == 2 ? $server->price->price_hourly : 0),
+                'charge' => $request->price,
             ]);
             // Log::info('Masuk Sini 1');
             $user = User::find(Auth::user()->id);
-            switch ($request->metode) {
-                case 1:
-                    $user->balance -= $server->price->price_monthly;
-                    $user->save();
-                    break;
+            // switch ($request->metode) {
+            //     case 1:
+            //         $user->balance -= $server->price->price_monthly;
+            //         $user->save();
+            //         break;
 
-                case 2:
-                    $user->balance -= $server->price->price_hourly;
-                    $user->save();
-                    break;
-                default:
-                    return response()->json(['status' => 'error', 'message' => 'User not authenticated']);
-                    break;
-            }
-
+            //     case 2:
+            //         $user->balance -= $server->price->price_hourly;
+            //         $user->save();
+            //         break;
+            //     default:
+            //         return response()->json(['status' => 'error', 'message' => 'User not authenticated']);
+            //         break;
+            // }
+            $user->balance -= $request->price;
+            $user->save();
             $server->current += 1;
             $server->total += 1;
             $server->update();
             
-            $mode = $request->metode;
+            $mode = $request->type;
             $modeText = ($mode == 1) ? 'Monthly' : (($mode == 2) ? 'Hourly' : 'Trial');
-            $price = ($mode == 1) ? $server->price->price_monthly : (($mode == 2) ? $server->price->price_hourly : 0);
+            $price = $request->price;
             
             $purchaseDetails = [
                 'name' => $user->name,
@@ -1139,7 +1143,7 @@ class AccountService
         $this->headers['Authorization'] = 'Bearer '.$server->token;
         $this->url = "http://" . $server->host . "/vps/trialsshvpn";
         $this->body = [
-            "timelimit" => '10m',
+            "timelimit" => '30m'
         ];
         $this->client = new Client([
             'headers' => $this->headers
@@ -1162,7 +1166,7 @@ class AccountService
                 'server_id' => $server->id,
                 'username' => $request->username,
                 'password' => $request->password,
-                'tipe' => $request->metode,
+                'tipe' => 3,
                 'expired_at' => $expiryDate,
                 'detail' => json_encode($output['data']),
                 'charge' =>  0,
@@ -1182,8 +1186,8 @@ class AccountService
             $trialData->trial_limit += 1; // Menambahkan 1 pada trial_limit
             $trialData->save(); // Menyimpan perubahan pada trial_limit
             
-            $mode = $request->metode;
-            $modeText = ($mode == 1) ? 'Monthly' : (($mode == 2) ? 'Hourly' : 'Trial');
+            $mode = 3;
+            $modeText = ($mode == 1) ? 'Monthly' : 'Trial';
             $price = ($mode == 1) ? $server->price->price_monthly : (($mode == 2) ? $server->price->price_hourly : 0);
             
             
@@ -1279,7 +1283,7 @@ class AccountService
         $this->headers['Authorization'] = 'Bearer '.$server->token;
         $this->url = "http://" . $server->host . "/vps/trialvmessall";
         $this->body = [
-            "timelimit" => "10m",
+            "timelimit" => "30m",
         ];
         $this->client = new Client([
             'headers' => $this->headers
@@ -1419,7 +1423,7 @@ class AccountService
         $this->headers['Authorization'] = 'Bearer '.$server->token;
         $this->url = "http://" . $server->host . "/vps/trialvlessall";
         $this->body = [
-            "timelimit" => "10m",
+            "timelimit" => "30m",
         ];
         $this->client = new Client([
             'headers' => $this->headers
@@ -1559,7 +1563,7 @@ class AccountService
         $this->headers['Authorization'] = 'Bearer '.$server->token;
         $this->url = "http://" . $server->host . "/vps/trialtrojanall";
         $this->body = [
-            "timelimit" => "10m",
+            "timelimit" => "30m",
         ];
         $this->client = new Client([
             'headers' => $this->headers

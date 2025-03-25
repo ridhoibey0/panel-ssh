@@ -110,6 +110,21 @@ class ServerController extends Controller
         try {
             $categoryData = Category::where('slug', $category)->firstOrFail();
             $serverData = Server::withCount('accounts')->where(['slug' => $server, 'category_id' => $categoryData->id])->firstOrFail();
+            $type = $request->type;
+            if ($type == 1) {
+                $pricePerMonth = $serverData->price->price_monthly;
+                $durationMonths = $request->duration;
+                $durationDays = $durationMonths * 30;
+                $totalPrice = $pricePerMonth * $durationMonths;
+            } elseif ($type == 2) {
+                $pricePerDay = $serverData->price->price_daily;
+                $durationDays = $request->duration;
+                $totalPrice = $pricePerDay * $durationDays;
+            } 
+            $request->merge([
+                'price' => $totalPrice,
+                'expired' => $durationDays
+            ]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => 'Category or Server not found']);
         }
